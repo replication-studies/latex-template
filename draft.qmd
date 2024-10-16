@@ -1,0 +1,88 @@
+---
+title: "LaTeX Template for the Journal of Fair Replication Studies"
+authors_info:
+  - name: "You R. Name"
+    email: "yrname@university.edu"
+    affiliation: "University of Somewhere"
+  - name: "Jane A. Doe"
+    email: "jadoe@university.edu"
+    affiliation: "University of Nowhere"
+  - name: "John B. Doe"
+    email: "jbdoe@university.edu"
+    affiliation: "University of Everywhere"
+authors_short: "Name et al."    
+abstract: |
+  This is the abstract of the document.
+copyright: |
+  Copyright \copyright 2024 Name, Doe and Doe. This is an open access article distributed under the Creative Commons Attribution License, which permits unrestricted use, distribution, and reproduction in any medium, provided the original work is properly cited.
+received: "15 October 2024"
+revised: "PENDING"
+accepted: "PENDING"
+bibliography: "references.bib"
+csl: chicago.csl
+format:
+  pdf:
+    pdf-engine: pdflatex
+    template: "template.tex"
+    keep-tex: true
+output-file: "draft.pdf"
+ready-to-publish: false
+---
+
+# OLS estimator
+
+The OLS estimator is given by $\hat{\beta} = (X'X)^{-1}X'Y$, where
+$X \in \mathbb{R}^{n \times p}$ is the design matrix and $Y \in \mathbb{R}^n$
+is the response vector [@hansen2022econometrics]. Therefore,
+$\hat{\beta} \in \mathbb{R}^p$.
+
+A naive way to obtain the OLS estimator in R is:
+
+```r
+b <- solve(t(X) %*% X) %*% t(X) %*% Y
+```
+
+# LM function
+
+A better way is to use the `lm` function:
+
+```{r lm}
+n <- 10L
+
+set.seed(123)
+x1 <- rnorm(n)
+x2 <- rbinom(n, 1, 0.5)
+
+X <- cbind(x1, x2)
+
+y <- rnorm(n)
+
+lm(y ~ X)
+```
+
+# LM function with rendered table
+
+```{r lm-table, echo=FALSE}
+library(knitr)
+library(broom)
+
+tidy(lm(y ~ X))
+```
+
+# Plots
+
+## Ggplot2
+
+```{r lm-plot, echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=3}
+library(ggplot2)
+
+ggplot(data.frame(x1, x2, y), aes(x = x1, y = y)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+# Acknowledgements
+
+The authors would like to thank the JRSSR team for providing this template.
+
+# References
