@@ -1,21 +1,22 @@
 ---
-title: "LaTeX Template for the Journal of Fair Replication Studies"
+title: "Shortened Version of 'Replicating The Log of Gravity'"
 authors_info:
-  - name: "You R. Name"
-    email: "yrname@university.edu"
-    affiliation: "University of Somewhere"
-  - name: "Jane A. Doe"
-    email: "jadoe@university.edu"
-    affiliation: "University of Nowhere"
-  - name: "John B. Doe"
-    email: "jbdoe@university.edu"
-    affiliation: "University of Everywhere"
-authors_short: "Name et al."    
-abstract: |
-  This is the abstract of the document.
+  - name: "Mauricio Vargas Sepulveda"
+    email: "m.sepulveda@mail.utoronto.ca"
+    affiliation: "University of Toronto"
+authors_short: "Mauricio Vargas Sepulveda"    
+abstract: |  
+  This document replicates the main results from @silva2006log in R. The original
+  results were obtained in TSP back in 2006. The idea here is to be explicit
+  regarding the conceptual approach to regression in R. For most of the
+  replication I used base R without external libraries except when it was
+  absolutely necessary. The findings are consistent with the original article and
+  reveal that the replication effort is minimal, without the need to contact the
+  authors for clarifications or incur into data transformations or filtering not
+  mentioned in the article.
 copyright: |
-  Copyright \copyright 2024 Name, Doe and Doe. This is an open access article distributed under the Creative Commons Attribution License, which permits unrestricted use, distribution, and reproduction in any medium, provided the original work is properly cited.
-received: "15 October 2024"
+  Copyright \copyright 2024 Mauricio Vargas Sepulveda. This is an open access article distributed under the Creative Commons Attribution License, which permits unrestricted use, distribution, and reproduction in any medium, provided the original work is properly cited.
+received: "16 October 2024"
 revised: "PENDING"
 accepted: "PENDING"
 bibliography: "references.bib"
@@ -29,60 +30,163 @@ output-file: "draft.pdf"
 ready-to-publish: false
 ---
 
-# OLS estimator
-
-The OLS estimator is given by $\hat{\beta} = (X'X)^{-1}X'Y$, where
-$X \in \mathbb{R}^{n \times p}$ is the design matrix and $Y \in \mathbb{R}^n$
-is the response vector [@hansen2022econometrics]. Therefore,
-$\hat{\beta} \in \mathbb{R}^p$.
-
-A naive way to obtain the OLS estimator in R is:
-
-```r
-b <- solve(t(X) %*% X) %*% t(X) %*% Y
-```
-
-# LM function
-
-A better way is to use the `lm` function:
-
-```{r lm}
-n <- 10L
-
-set.seed(123)
-x1 <- rnorm(n)
-x2 <- rbinom(n, 1, 0.5)
-
-X <- cbind(x1, x2)
-
-y <- rnorm(n)
-
-lm(y ~ X)
-```
-
-# LM function with rendered table
-
-```{r lm-table, echo=FALSE}
+```{r setup, include=FALSE}
 library(knitr)
-library(broom)
-
-tidy(lm(y ~ X))
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache = TRUE)
 ```
 
-# Plots
+# Introduction
 
-## Ggplot2
+**This template is a shortened version of @sepulveda_replicating_2024.**
 
-```{r lm-plot, echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=3}
-library(ggplot2)
+@silva2006log used [TSP](https://en.wikipedia.org/wiki/TSP_(econometrics_software))
+back in 2006 to estimate different functional forms of the gravity model
+of trade. The article is a classic in the field of international trade and
+has been cited over 8,500 times according to Google Scholar. Its contribution,
+which was a new Poisson-based estimator to correct the bias in the Ordinary
+Least Squares (OLS) estimator under heteroskedasticity, has been widely used in
+the academic literature. Besides pure academic interests, the OLS estimator bias
+has implications for policy analysis, and posterior works with clear insights
+for International Relations academics and Public Policy practitioners, including
+@head_chapter_2014, @yotov_advanced_2016, and @felbermayr_global_2020.
 
-ggplot(data.frame(x1, x2, y), aes(x = x1, y = y)) +
-  geom_point() +
-  geom_smooth(method = "lm")
+Outside of statistical concerns about biases, the field of International
+Relations has developed interesting critiques about leaving theory behind.
+@mearsheimer_leaving_2013 argues that the field has been dominated by
+quantitative studies that present simplistic hypothesis after incentives to
+present academic findings as more interesting for policymakers. From this
+critique, @silva2006log is relevant not only for its methodological contribution
+and presenting an estimator that can largely differ from OLS, but also for
+presenting an estimator that is consistent with micro-founded approaches to
+the gravity model of trade, including @eaton_technology_2001.
+
+The goal in this document is to be explicit regarding the conceptual approach to
+regression in R. For most of the replication we used base R [@core2021base] and
+relying on external libraries (e.g., R packages) when it was absolutely
+necessary based on the criteria that implementing methods such as the Tobit
+estimator from scratch would be time consuming and would deviate from the
+replication effort. The results are consistent with the gravity package
+[@woelwer2020gravity] which provides convenient wrappers for gravity estimation,
+but the idea was to be explicit about the steps involved in the replication
+process and using wrappers would have made the steps less clear.
+
+# Original codes and data
+
+We organized the original codes and data from the authors' site,
+[The Log of Gravity](https://personal.lse.ac.uk/tenreyro/lgw.html), and the
+full replication code on [GitHub](https://github.com/pachadotdev/log-of-gravity)
+to ease replication in the event that the links change in the future.
+
+The original dataset obtained in the previous step is available in Stata
+format, a closed source format that we can read in R thanks to the haven package
+[@wickham2021haven] without loss of information or other common problems when
+reading proprietary formats.
+
+# Models replication
+
+## Poisson Pseudo Maximum Likelihood
+
+Table 3 in @silva2006log summarises a large portion of the article. Starting
+from the Poisson Pseudo Maximum Likelihood (PPML) estimation, we can replicate
+the results with the Generalized Linear Model (GLM) and a quasi-Poisson link in
+R. The original article estimates the model with and without zero flows.
+
+We could replicate the PPML model results with and without zero flows with the
+following R code:
+
+```{r replication}
+library(haven) # read Stata datasets
+library(censReg) # Tobit estimation
+library(stargazer) # table of results
+
+log_of_gravity <- read_dta("regressors/Log of Gravity.dta")
+
+ppml_formula <- trade ~ lypex + lypim + lyex + lyim + ldist + border +
+  comlang + colony + landl_ex + landl_im + lremot_ex + lremot_im +
+  comfrt_wto + open_wto
+
+fit_ppml_1 <- glm(
+  ppml_formula,
+  data = log_of_gravity,
+  subset = trade > 0,
+  family = quasipoisson()
+)
+
+fit_ppml_2 <- glm(
+  ppml_formula,
+  data = log_of_gravity,
+  family = quasipoisson()
+)
 ```
+
+The replication effort for the PPML model was minimal, it was sufficient to look
+at the summary table in the article and subset the data to drop zero flows. This
+step did not require to guess data cleaning steps or transformations not
+mentioned in the article.
+
+## Ordinary Least Squares
+
+The only consideration for the OLS model was to drop zero flows for some of the
+models with log in the dependent variable even when Table 3 is not explicit
+about this, otherwise we break the fitting algorithm (e.g. because
+$\log(0) \to -\infty$).
+
+For estimations of the form
+$\log(\text{trade}) = \beta_0 + \beta_1 \text{lypex} + \dots + \varepsilon,$
+we needed to drop zero flows to replicate the result. On the other hand, 
+for estimations of the type 
+$\log(1 + \text{trade}) = \beta_0 + \beta_1 \text{lypex} + \dots + \varepsilon,$
+we did not need to drop zero flows.
+
+```{r replication2}
+fit_ols_1 <- lm(
+  update.formula(ppml_formula, log(.) ~ .),
+  data = log_of_gravity,
+  subset = trade > 0
+)
+
+fit_ols_2 <- lm(
+  update.formula(ppml_formula, log(1 + .) ~ .),
+  data = log_of_gravity
+)
+```
+
+# Replication results
+
+@silva2006log is very close to full replication according to the criteria
+defined in @peng2011reproducible. The replication results are consistent with
+the original article and reveal equivalent figures for all the models estimated
+in the original article.
+
+The results are presented in the following table:
+
+```{r replication5, results='asis'}
+stargazer(
+  fit_ols_1, fit_ols_2, fit_ppml_1, fit_ppml_2,
+  header = FALSE, font.size = "footnotesize", model.names = F,
+  omit.table.layout = "d", omit.stat = c(
+    "f", "ser", "ll", "aic", "bic", "rsq", "adj.rsq"
+  ),
+  title = "Replication results for OLS (1-2) and
+  PPML (3-4)."
+)
+```
+
+\newpage
+
+# Conclusion
+
+The replication effort was minimal, without the need to contact the authors for
+clarifications or incur into data transformations or filtering not mentioned in
+the article. The results are consistent with the original article and reveal
+proper and transparent scholarship. Ideally, all disciplines that rely on
+quantitative research and the use of statistical methods to test hypotheses
+should follow similar or higher standards of transparency, but that is not
+always the case as initiatives such as @simonsohn_data_2024 reveal.
 
 # Acknowledgements
 
-The authors would like to thank the JRSSR team for providing this template.
+Thanks to Joao Santos Silva for pointing that out, in a previous version of this
+document I mentioned that the original results were obtained with Stata.
 
 # References
