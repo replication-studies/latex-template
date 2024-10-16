@@ -96,7 +96,6 @@ following R code:
 
 ```{r replication}
 library(haven) # read Stata datasets
-library(censReg) # Tobit estimation
 library(stargazer) # table of results
 
 log_of_gravity <- read_dta("regressors/Log of Gravity.dta")
